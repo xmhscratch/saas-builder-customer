@@ -1,0 +1,93 @@
+version: '3.9'
+
+services:
+  master:
+    image: bitnami/mariadb:10.8
+    environment:
+    - BITNAMI_DEBUG=true
+    - ALLOW_EMPTY_PASSWORD=yes
+    - MARIADB_REPLICATION_MODE=master
+    - MARIADB_REPLICATION_USER=remote
+    - MARIADB_REPLICATION_PASSWORD=mCWDtkT6h9NMHsZq
+    - MARIADB_ROOT_PASSWORD=mCWDtkT6h9NMHsZq
+    - MARIADB_USER=remote
+    - MARIADB_PASSWORD=mCWDtkT6h9NMHsZq
+    - MARIADB_EXTRA_FLAGS=--max-connect-errors=100 --max_connections=500 --performance-schema=1 --join-buffer-size=2097152 --innodb-buffer-pool-size=10G --innodb-log-file-size=2097152000 --expire_logs_days=1 --sync-binlog=0
+    - MARIADB_CHARACTER_SET=ascii
+    - MARIADB_COLLATE=ascii_general_ci
+    ports:
+    - 3306:3306
+    networks:
+    - backend
+    volumes:
+    - data:/bitnami/mariadb
+    configs:
+    - source: mycustom
+      target: /opt/bitnami/mariadb/conf/my_custom.cnf
+      uid: '0'
+      gid: '0'
+      mode: 0664
+    deploy:
+      placement:
+        constraints:
+        - node.role == manager
+      resources:
+        limits:
+          cpus: '0.75'
+          memory: 1024M
+        reservations:
+          cpus: '0.25'
+          memory: 128M
+      update_config:
+        parallelism: 2
+        delay: 10s
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 180s
+
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin:latest
+    ports:
+    - 8306:80
+    networks:
+    - backend
+    depends_on:
+    - master
+    volumes:
+    - sessions:/sessions
+    configs:
+    - source: userconfig
+      target: /etc/phpmyadmin/config.user.inc.php
+      uid: '0'
+      gid: '0'
+      mode: 0664
+    deploy:
+      mode: global
+      placement:
+        constraints:
+        - node.role == manager
+      restart_policy:
+        condition: on-failure
+        max_attempts: 3
+
+configs:
+  userconfig:
+    external: true
+    # file: ./userconfig.php
+  mycustom:
+    external: true
+    # file: ./my_config.cnf
+
+networks:
+  backend:
+    driver: overlay
+    attachable: true
+
+volumes:
+  data:
+    driver: local
+
+  sessions:
+    driver: local
