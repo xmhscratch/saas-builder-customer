@@ -1,0 +1,28 @@
+image: docker:20.10.6
+
+services:
+  - name: docker:20.10.6-dind
+    command: ["--insecure-registry=localhost:5000"]
+
+stages:
+  - publish
+
+variables:
+  GIT_SSL_NO_VERIFY: "true"
+  DOCKER_DRIVER: overlay2
+  DOCKER_REGISTRY_URI: localhost:5000
+  DOCKER_USERNAME: root
+  DOCKER_PASSWORD: "123456"
+  DOCKER_TLS_CERTDIR: ""
+
+before_script:
+  - echo "$DOCKER_PASSWORD" | docker login --username=$DOCKER_USERNAME --password-stdin $DOCKER_REGISTRY_URI
+
+publish:
+  stage: publish
+  script:
+  - docker build -t $DOCKER_REGISTRY_URI/customer:$CI_COMMIT_SHA ./
+  - docker tag $DOCKER_REGISTRY_URI/customer:$CI_COMMIT_SHA $DOCKER_REGISTRY_URI/customer:latest
+  - docker push $DOCKER_REGISTRY_URI/customer:latest
+  only:
+    - release

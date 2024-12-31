@@ -1,0 +1,85 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    service.name: customer
+  name: customer
+  namespace: localdomain
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      service.name: customer
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 50%
+      maxSurge: 1
+  minReadySeconds: 30
+  template:
+    metadata:
+      labels:
+        service.name: customer
+    spec:
+      securityContext:
+        runAsUser: 0
+        fsGroup: 0
+      containers:
+      - env:
+        - name: APP_NAME
+          value: customer
+        - name: GO_ENV
+          value: "production"
+        - name: GIN_MODE
+          value: "release"
+        image: localhost:5000/customer:latest
+        command: ["su", "-s", "/bin/sh", "root", "-c"]
+        args: ["/export/main"]
+        name: customer
+        resources: {}
+          # requests:
+          #   memory: "512Mi"
+          #   cpu: "512m"
+          # limits:
+          #   memory: "1024Mi"
+          #   cpu: "1024m"
+        ports:
+        - containerPort: 5010
+          protocol: TCP
+        volumeMounts:
+        - name: tmp-pvc
+          mountPath: "/tmp/"
+        - name: data-pvc
+          mountPath: "/export/data/"
+        # readinessProbe:
+        #   failureThreshold: 3
+        #   httpGet:
+        #     path: /health
+        #     port: 5010
+        #     scheme: HTTP
+        #   initialDelaySeconds: 5
+        #   periodSeconds: 10
+        #   successThreshold: 1
+        #   timeoutSeconds: 1
+        # livenessProbe:
+        #   failureThreshold: 3
+        #   httpGet:
+        #     path: /health
+        #     port: 5010
+        #     scheme: HTTP
+        #   initialDelaySeconds: 5
+        #   periodSeconds: 10
+        #   successThreshold: 1
+        #   timeoutSeconds: 1
+        imagePullPolicy: Always
+      restartPolicy: Always
+      imagePullSecrets:
+        - name: registry-credentials
+      terminationGracePeriodSeconds: 30
+      volumes:
+      - name: tmp-pvc
+        persistentVolumeClaim:
+          claimName: tmp
+      - name: data-pvc
+        persistentVolumeClaim:
+          claimName: data

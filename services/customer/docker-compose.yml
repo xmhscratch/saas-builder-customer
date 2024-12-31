@@ -1,0 +1,215 @@
+version: '3.9'
+
+# upload_security_file
+# upload_config_sets
+# delete_config_sets
+# delete_collection
+# erase_collection_data
+# full_import
+# delta_import
+
+services:
+  ########## CREATE SOLR DEFAULT SECURITY ###########
+  upload_security_file:
+    image: solr:8.11
+    privileged: true
+    stdin_open: true
+    tty: true
+    extra_hosts:
+    - solr_solr_svc:192.168.56.150
+    - rabbitmq_svc:192.168.56.150
+    - redis_master:192.168.56.150
+    - mongodb_primary:192.168.56.150
+    - mariadb_master:192.168.56.105
+    - mariadb_slave:192.168.56.105
+    volumes:
+    - data:/export/data/
+    - tmp:/export/tmp/
+    - /home/web/repos/system/customer:/go/src/localdomain/system/customer
+    - $GOPATH/src/github.com:/go/src/github.com
+    - $GOPATH/src/golang.org:/go/src/golang.org
+    - $GOPATH/src/gopkg.in:/go/src/gopkg.in
+    - $GOPATH/src/sourcegraph.com:/go/src/sourcegraph.com
+    working_dir: /go/src/localdomain/system/customer/
+    entrypoint: /bin/bash -c
+    command:
+    - |
+      apt update && apt install -y curl zip; \
+      echo -e '{"authentication":{"blockUnknown":true,"class":"solr.BasicAuthPlugin","credentials":{"solr":"IV0EHq1OnNrj6gvRCwvFwTrZ1+z1oBbnQdiVC3otuq0= Ndd7LKvVBAaZIF0QAVi1ekCfAJXr1GGfLtRUXhgrF8c="},"realm":"system","forwardCredentials":false},"authorization":{"class":"solr.RuleBasedAuthorizationPlugin","permissions":[{"name":"security-edit","role":"admin"}],"user-role":{"solr":"admin"}}}' > ./security.json; \
+      bin/solr zk cp file:./security.json zk:/security.json -z solr_solr_svc:2181;
+
+  ########## UPLOAD CUSTOMER CONFIG SETS ###########
+  upload_config_sets:
+    image: localdomain:5000/customer
+    privileged: true
+    stdin_open: true
+    tty: true
+    extra_hosts:
+    - solr_solr_svc:192.168.56.150
+    - rabbitmq_svc:192.168.56.150
+    - redis_master:192.168.56.150
+    - mongodb_primary:192.168.56.150
+    - mariadb_master:192.168.56.105
+    - mariadb_slave:192.168.56.105
+    volumes:
+    - data:/export/data/
+    - tmp:/export/tmp/
+    - /home/web/repos/customer:/go/src/localdomain/system/customer
+    - $GOPATH/src/github.com:/go/src/github.com
+    - $GOPATH/src/golang.org:/go/src/golang.org
+    - $GOPATH/src/gopkg.in:/go/src/gopkg.in
+    - $GOPATH/src/sourcegraph.com:/go/src/sourcegraph.com
+    working_dir: /go/src/localdomain/system/customer/
+    entrypoint: /bin/bash -c
+    command:
+    - |
+      cd /export/config/solr/conf; \
+      zip -r - * | curl -X POST --user solr:SolrRocks --header "Content-Type:application/octet-stream" --data-binary @- "http://solr_solr_svc:8983/solr/admin/configs?action=UPLOAD&name=customer"; \
+      curl -X POST --user solr:SolrRocks --header "Content-Type:application/json;charset=utf-8" "http://solr_solr_svc:8983/solr/admin/collections?_=1571830773677&action=CREATE&autoAddReplicas=false&collection.configName=customer&maxShardsPerNode=1&name=customer_1ef19f81-a3a1-45a2-9203-b792abcddc52&numShards=1&replicationFactor=1&router.name=compositeId&wt=json";
+
+  delete_collection:
+    image: localhost:5000/customer
+    privileged: true
+    stdin_open: true
+    tty: true
+    extra_hosts:
+    - solr_solr_svc:192.168.56.150
+    - rabbitmq_svc:192.168.56.150
+    - redis_master:192.168.56.150
+    - mongodb_primary:192.168.56.150
+    - mariadb_master:192.168.56.105
+    - mariadb_slave:192.168.56.105
+    volumes:
+    - data:/export/data/
+    - tmp:/export/tmp/
+    - /home/web/repos/customer:/go/src/localdomain/system/customer
+    - $GOPATH/src/github.com:/go/src/github.com
+    - $GOPATH/src/golang.org:/go/src/golang.org
+    - $GOPATH/src/gopkg.in:/go/src/gopkg.in
+    - $GOPATH/src/sourcegraph.com:/go/src/sourcegraph.com
+    working_dir: /go/src/localdomain/system/customer/
+    entrypoint: /bin/sh -c
+    command:
+    - |
+      # echo $$(sed '/^#/d' ./solr-variables.env) | exec; \
+      cd /export/config/solr/conf; \
+      curl -k -X GET --user solr:SolrRocks "http://solr_solr_svc:8983/solr/admin/collections?action=DELETE&name=customer"; \
+      curl -k -X GET --user solr:SolrRocks "http://solr_solr_svc:8983/solr/admin/collections?action=DELETE&name=customer_1ef19f81-a3a1-45a2-9203-b792abcddc52";
+
+  ########## ERASE CUSTOMER CONFIG SETS ###########
+  delete_config_sets:
+    image: localhost:5000/customer
+    privileged: true
+    stdin_open: true
+    tty: true
+    extra_hosts:
+    - solr_solr_svc:192.168.56.150
+    - rabbitmq_svc:192.168.56.150
+    - redis_master:192.168.56.150
+    - mongodb_primary:192.168.56.150
+    - mariadb_master:192.168.56.105
+    - mariadb_slave:192.168.56.105
+    volumes:
+    - data:/export/data/
+    - tmp:/export/tmp/
+    - /home/web/repos/customer:/go/src/localdomain/system/customer
+    - $GOPATH/src/github.com:/go/src/github.com
+    - $GOPATH/src/golang.org:/go/src/golang.org
+    - $GOPATH/src/gopkg.in:/go/src/gopkg.in
+    - $GOPATH/src/sourcegraph.com:/go/src/sourcegraph.com
+    working_dir: /go/src/localdomain/system/customer/
+    entrypoint: /bin/bash -c
+    command:
+    - |
+      cd /export/config/solr/conf; \
+      curl -k -X GET --user solr:SolrRocks "http://solr_solr_svc:8983/solr/admin/configs?action=DELETE&name=customer&omitHeader=true"; \
+      curl -k -X GET --user solr:SolrRocks "http://solr_solr_svc:8983/solr/admin/configs?action=DELETE&name=customer_1ef19f81-a3a1-45a2-9203-b792abcddc52&omitHeader=true";
+
+  erase_collection_data:
+    image: localhost:5000/customer
+    privileged: true
+    stdin_open: true
+    tty: true
+    extra_hosts:
+    - solr_solr_svc:192.168.56.150
+    - rabbitmq_svc:192.168.56.150
+    - redis_master:192.168.56.150
+    - mongodb_primary:192.168.56.150
+    - mariadb_master:192.168.56.105
+    - mariadb_slave:192.168.56.105
+    volumes:
+    - data:/export/data/
+    - tmp:/export/tmp/
+    - /home/web/repos/customer:/go/src/localdomain/system/customer
+    - $GOPATH/src/github.com:/go/src/github.com
+    - $GOPATH/src/golang.org:/go/src/golang.org
+    - $GOPATH/src/gopkg.in:/go/src/gopkg.in
+    - $GOPATH/src/sourcegraph.com:/go/src/sourcegraph.com
+    working_dir: /go/src/localdomain/system/customer/
+    entrypoint: /bin/bash -c
+    command:
+    - |
+      cd /export/config/solr/conf; \
+      echo "<delete><query>*.*</query></delete>" | curl -X POST --user solr:SolrRocks --header "Content-Type:text/xml" --data-binary @- "http://solr_solr_svc:8983/solr/customer_1ef19f81-a3a1-45a2-9203-b792abcddc52/update?commit=true";
+
+  ########## FULL IMPORT ###########
+  full_import:
+    image: localhost:5000/customer
+    privileged: true
+    stdin_open: true
+    tty: true
+    extra_hosts:
+    - solr_solr_svc:192.168.56.150
+    - rabbitmq_svc:192.168.56.150
+    - redis_master:192.168.56.150
+    - mongodb_primary:192.168.56.150
+    - mariadb_master:192.168.56.105
+    - mariadb_slave:192.168.56.105
+    volumes:
+    - data:/export/data/
+    - tmp:/export/tmp/
+    - /home/web/repos/customer:/go/src/localdomain/system/customer
+    - $GOPATH/src/github.com:/go/src/github.com
+    - $GOPATH/src/golang.org:/go/src/golang.org
+    - $GOPATH/src/gopkg.in:/go/src/gopkg.in
+    - $GOPATH/src/sourcegraph.com:/go/src/sourcegraph.com
+    working_dir: /go/src/localdomain/system/customer/
+    entrypoint: /bin/bash -c
+    command:
+    - |
+      cd /export/config/solr/conf; \
+      curl -k -X GET --user solr:SolrRocks "http://solr_solr_svc:8983/solr/customer/dataimport?wt=json&command=full-import&clean=true&hostname=mariadb_master&user=root&password=mCWDtkT6h9NMHsZq&organizationId=1ef19f81-a3a1-45a2-9203-b792abcddc52";
+
+  ########## DELTA IMPORT ########### 
+  delta_import:
+    image: localhost:5000/customer
+    privileged: true
+    stdin_open: true
+    tty: true
+    extra_hosts:
+    - solr_solr_svc:192.168.56.150
+    - rabbitmq_svc:192.168.56.150
+    - redis_master:192.168.56.150
+    - mongodb_primary:192.168.56.150
+    - mariadb_master:192.168.56.105
+    - mariadb_slave:192.168.56.105
+    volumes:
+    - data:/export/data/
+    - tmp:/export/tmp/
+    - /home/web/repos/customer:/go/src/localdomain/system/customer
+    - $GOPATH/src/github.com:/go/src/github.com
+    - $GOPATH/src/golang.org:/go/src/golang.org
+    - $GOPATH/src/gopkg.in:/go/src/gopkg.in
+    - $GOPATH/src/sourcegraph.com:/go/src/sourcegraph.com
+    working_dir: /go/src/localdomain/system/customer/
+    entrypoint: /bin/bash -c
+    command:
+    - |
+      cd /export/config/solr/conf; \
+      curl -k -X GET --user solr:SolrRocks "http://solr_solr_svc:8983/solr/customer/dataimport?wt=json&command=delta-import&clean=true&hostname=mariadb_master&user=root&password=mCWDtkT6h9NMHsZq&organizationId=1ef19f81-a3a1-45a2-9203-b792abcddc52";
+
+volumes:
+  tmp:
+    external: true
+  data:
+    external: true

@@ -1,0 +1,14 @@
+kind: Service
+apiVersion: v1
+metadata:
+  labels:
+    service.name: customer
+  name: customer
+spec:
+  type: NodePort
+  ports:
+  - name: "http"
+    port: 5010
+    targetPort: 5010
+  selector:
+    service.name: customer

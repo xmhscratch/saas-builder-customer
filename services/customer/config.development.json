@@ -1,0 +1,37 @@
+{
+    "debug": false,
+    "port": "5010",
+    "hostName": "customer.localdomain.local",
+    "clusterHostName": "customer_app",
+    "clusterHostNames": {
+        "api": "api_app:3500",
+        "integration": "integration_app:3600",
+        "customer": "customer_app:5010"
+    },
+    "redis": {
+        "dbName": 1,
+        "host": "redis_master",
+        "port": "6379",
+        "password": "SyyA7uBprWZcycC3"
+    },
+    "solr": {
+        "host": "solr_solr_svc",
+        "port": "8983",
+        "username": "solr",
+        "password": "SolrRocks",
+        "collection": "system_customer",
+        "mysqlHost": "mariadb_master"
+    },
+    "mysql": {
+        "user": "root",
+        "password": "mCWDtkT6h9NMHsZq",
+        "host": "mariadb_master",
+        "port": "3306",
+        "type": "mysql",
+        "maxIdleConnection": 25,
+        "maxOpenConnection": 25
+    },
+    "amqpConnectionString": "amqp://remote:HEqKFYJd5nUDzduL@rabbitmq_svc:5672/",
+    "tmpPath": "/export/tmp/",
+    "dataPath": "/export/data/"
+}
