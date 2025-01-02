@@ -1,0 +1,1 @@
+![alt text](https://github.com/xmhscratch/saas-builder-customer/blob/main/structural.jpg?raw=true)
